@@ -1,0 +1,138 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters":  { 
+        "dbNSGName": {
+            "type": "string",
+            "metadata": {
+                "description": "description"
+            },
+            "defaultValue": "dbNSG"
+        }
+    },
+    "functions": [],
+    "variables": {
+        "dbSubnetAddress": "10.20.20.0/24",
+        "sssSubnetAddress": "10.20.10.0",
+        "vnet01NetworkPrefix": "10.20.0.0/16"
+    },
+    "resources": [
+        {
+            "name": "[parameters('dbNSGName')]",
+            "type": "Microsoft.Network/networkSecurityGroups",
+            "apiVersion": "2024-03-01",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "securityRules": [
+                    {
+                        "name": "dbTrafficFilter",
+                        "properties": {
+                            "description": "allow only traffic from sharedServicesSubnet",
+                            "protocol": "Tcp",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "3306",
+                            "sourceAddressPrefix": "[variables('sssSubnetAddress')]",
+                            "destinationAddressPrefix": "[variables('dbSubnetAddress')]",
+                            "access": "Allow",
+                            "priority": 100,
+                            "direction": "Inbound"
+                        }
+                    }
+                ]
+            }
+        },
+        
+{
+    "name": "vnet 1NSG",
+    "type": "Microsoft.Network/networkSecurityGroups",
+    "apiVersion": "2024-03-01",
+    "location": "[resourceGroup().location]",
+    "properties": {
+        "securityRules": [
+            {
+                "name": "nsgRule1",
+                "properties": {
+                    "description": "description",
+                    "protocol": "Tcp",
+                    "sourcePortRange": "*",
+                    "destinationPortRange": "*",
+                    "sourceAddressPrefix": "*",
+                    "destinationAddressPrefix": "*",
+                    "access": "Allow",
+                    "priority": 100,
+                    "direction": "Inbound"
+                }
+            }
+        ]
+    }
+}, 
+
+
+         {
+            "name": "CoreServiceVnet",
+            "type": "Microsoft.Network/virtualNetworks",
+            "apiVersion": "2024-03-01",
+            "location": "[resourceGroup().location]",
+            "tags": {
+                "displayName": "virtualNetwork1"
+            },
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/networkSecurityGroups', 'vnet 1NSG')]"
+            ],
+            "properties": {
+                "addressSpace": {
+                    "addressPrefixes": [
+                        "[variables('vnet01NetworkPrefix')]"
+                    ]
+                },
+                "subnets": [
+                    {
+                        "name": "SharedServicesSubnet",
+                        "properties": {
+                            "addressPrefix": "[variables('sssSubnetAddress')]",
+                            "networkSecurityGroup": {
+                                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', 'sssNSG')]"
+                            }
+                        }
+                    },
+                    {
+                        "name": "DatabaseSubnet",
+                        "properties": {
+                            "addressPrefix": "[variables('dbSubnetAddress')]",
+                            "networkSecurityGroup": {
+                                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('dbNSGName'))]"
+                            }
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "name": "sssNSG",
+            "type": "Microsoft.Network/networkSecurityGroups",
+            "apiVersion": "2024-03-01",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "securityRules": [
+                    {
+                        "name": "nsgRule1",
+                        "properties": {
+                            "description": "description",
+                            "protocol": "Tcp",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "*",
+                            "sourceAddressPrefix": "*",
+                            "destinationAddressPrefix": "*",
+                            "access": "Allow",
+                            "priority": 100,
+                            "direction": "Inbound"
+                        }
+                    }
+                ]
+            }
+        }
+    ],
+
+
+    "outputs": {}
+}
